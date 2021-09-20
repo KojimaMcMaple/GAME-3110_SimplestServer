@@ -29,7 +29,6 @@ public class NetworkedServer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
         int recHostID;
         int recConnectionID;
         int recChannelID;
@@ -55,7 +54,6 @@ public class NetworkedServer : MonoBehaviour
                 Debug.Log("Disconnection, " + recConnectionID);
                 break;
         }
-
     }
   
     public void SendMessageToClient(string msg, int id)
@@ -69,5 +67,4 @@ public class NetworkedServer : MonoBehaviour
     {
         Debug.Log("msg received = " + msg + ".  connection id = " + id);
     }
-
 }
