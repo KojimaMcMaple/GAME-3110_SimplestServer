@@ -15,8 +15,9 @@ public class NetworkedServer : MonoBehaviour
     int socketPort = 5491;
 
     LinkedList<PlayerAccount> account_list_;
+    const int kPlayerAccountNameAndPassword = 1;
+    string accounts_file_path_;
 
-    // Start is called before the first frame update
     void Start()
     {
         NetworkTransport.Init();
@@ -27,9 +28,15 @@ public class NetworkedServer : MonoBehaviour
         hostID = NetworkTransport.AddHost(topology, socketPort, null);
 
         account_list_ = new LinkedList<PlayerAccount>();
+        accounts_file_path_ = Application.dataPath + Path.DirectorySeparatorChar + "PlayerAccounts.txt";
+        LoadPlayerAccounts();
+
+        //foreach (PlayerAccount item in account_list_)
+        //{
+
+        //}
     }
 
-    // Update is called once per frame
     void Update()
     {
         int recHostID;
@@ -71,13 +78,13 @@ public class NetworkedServer : MonoBehaviour
         Debug.Log("msg received = " + msg + ".  connection id = " + id);
         string[] csv = msg.Split(',');
         GlobalEnum.ClientToServerSignifier signifier = (GlobalEnum.ClientToServerSignifier)System.Enum.Parse(typeof(GlobalEnum.ClientToServerSignifier), csv[0]);
+        string n = csv[1];
+        string p = csv[2];
 
         switch (signifier)
         {
             case GlobalEnum.ClientToServerSignifier.CreateAccount:
                 Debug.Log("GlobalEnum.ClientToServerSignifier.CreateAccount");
-                string n = csv[1];
-                string p = csv[2];
                 bool does_name_exist = false;
                 foreach (PlayerAccount item in account_list_)
                 {
@@ -96,13 +103,57 @@ public class NetworkedServer : MonoBehaviour
                     PlayerAccount new_account = new PlayerAccount(n, p);
                     account_list_.AddLast(new_account);
                     SendMessageToClient(GlobalEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
+                    SavePlayerAccounts();
                 }
                 break;
             case GlobalEnum.ClientToServerSignifier.Login:
                 Debug.Log("GlobalEnum.ClientToServerSignifier.Login");
+                bool does_account_exist = false;
+                foreach (PlayerAccount item in account_list_)
+                {
+                    if (item.name == n && item.password == p)
+                    {
+                        does_account_exist = true;
+                        SendMessageToClient(GlobalEnum.ServerToClientSignifier.LoginComplete + "", id);
+                        break;
+                    }
+                }
+                if (!does_account_exist)
+                {
+                    SendMessageToClient(GlobalEnum.ServerToClientSignifier.LoginFailed + "", id);
+                }
                 break;
             default:
                 break;
+        }
+    }
+
+    private void SavePlayerAccounts()
+    {
+        StreamWriter sw = new StreamWriter(accounts_file_path_);
+        foreach (PlayerAccount item in account_list_)
+        {
+            sw.WriteLine(kPlayerAccountNameAndPassword + "," + item.name + "," + item.password);
+        }
+        sw.Close();
+    }
+
+    private void LoadPlayerAccounts()
+    {
+        if (File.Exists(accounts_file_path_))
+        {
+            StreamReader sr = new StreamReader(accounts_file_path_);
+            string line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                string[] csv = line.Split(',');
+                int signifier = int.Parse(csv[0]);
+                if (signifier == kPlayerAccountNameAndPassword)
+                {
+                    account_list_.AddLast(new PlayerAccount(csv[1], csv[2]));
+                }
+            }
+            sr.Close();
         }
     }
 }
@@ -116,6 +167,11 @@ public class PlayerAccount
         this.name = name;
         this.password = password;
     }
+}
+
+public class GameRoom
+{
+
 }
 
 public static class GlobalEnum //copied from NetworkedClient
