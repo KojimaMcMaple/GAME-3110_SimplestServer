@@ -17,6 +17,8 @@ public class NetworkedServer : MonoBehaviour
     LinkedList<PlayerAccount> account_list_;
     const int kPlayerAccountNameAndPassword = 1;
     string accounts_file_path_;
+    int player_id_waiting_for_match_ = -1;
+    LinkedList<GameRoom> room_list_;
 
     void Start()
     {
@@ -35,6 +37,7 @@ public class NetworkedServer : MonoBehaviour
         //{
 
         //}
+        room_list_ = new LinkedList<GameRoom>();
     }
 
     void Update()
@@ -77,14 +80,14 @@ public class NetworkedServer : MonoBehaviour
     {
         Debug.Log("msg received = " + msg + ".  connection id = " + id);
         string[] csv = msg.Split(',');
-        GlobalEnum.ClientToServerSignifier signifier = (GlobalEnum.ClientToServerSignifier)System.Enum.Parse(typeof(GlobalEnum.ClientToServerSignifier), csv[0]);
+        NetworkEnum.ClientToServerSignifier signifier = (NetworkEnum.ClientToServerSignifier)System.Enum.Parse(typeof(NetworkEnum.ClientToServerSignifier), csv[0]);
         string n = csv[1];
         string p = csv[2];
 
         switch (signifier)
         {
-            case GlobalEnum.ClientToServerSignifier.CreateAccount:
-                Debug.Log("GlobalEnum.ClientToServerSignifier.CreateAccount");
+            case NetworkEnum.ClientToServerSignifier.CreateAccount:
+                Debug.Log(">>> Creating Account...");
                 bool does_name_exist = false;
                 foreach (PlayerAccount item in account_list_)
                 {
@@ -96,31 +99,64 @@ public class NetworkedServer : MonoBehaviour
                 }
                 if (does_name_exist)
                 {
-                    SendMessageToClient(GlobalEnum.ServerToClientSignifier.AccountCreationFailed + "", id);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationFailed + "", id);
+                    Debug.Log(">>> Creating Account FAILED!");
                 }
                 else
                 {
                     PlayerAccount new_account = new PlayerAccount(n, p);
                     account_list_.AddLast(new_account);
-                    SendMessageToClient(GlobalEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
                     SavePlayerAccounts();
+                    Debug.Log(">>> Creating Account done!");
                 }
                 break;
-            case GlobalEnum.ClientToServerSignifier.Login:
-                Debug.Log("GlobalEnum.ClientToServerSignifier.Login");
+            case NetworkEnum.ClientToServerSignifier.Login:
+                Debug.Log(">>> Logging in...");
                 bool does_account_exist = false;
                 foreach (PlayerAccount item in account_list_)
                 {
                     if (item.name == n && item.password == p)
                     {
                         does_account_exist = true;
-                        SendMessageToClient(GlobalEnum.ServerToClientSignifier.LoginComplete + "", id);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginComplete + "", id);
+                        Debug.Log(">>> Login done!");
                         break;
                     }
                 }
                 if (!does_account_exist)
                 {
-                    SendMessageToClient(GlobalEnum.ServerToClientSignifier.LoginFailed + "", id);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginFailed + "", id);
+                    Debug.Log(">>> Login FAILED!");
+                }
+                break;
+            case NetworkEnum.ClientToServerSignifier.JoinQueueForGameRoom:
+                Debug.Log(">>> Getting player to queue...");
+                if (player_id_waiting_for_match_ == -1) //assign 1st player to player_id_waiting_for_match_
+                {
+                    player_id_waiting_for_match_ = id;
+                }
+                else //create room when 2nd player joins
+                {
+                    GameRoom gr = new GameRoom(player_id_waiting_for_match_, id);
+                    room_list_.AddLast(gr);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_1);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_2);
+                    player_id_waiting_for_match_ = -1;
+                }
+                break;
+            case NetworkEnum.ClientToServerSignifier.TTTPlay:
+                GameRoom gr = GetGameRoomWithClientId(id);
+                if (gr != null)
+                {
+                    if (gr.player_id_1 == id)
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.OpponentPlay + "", gr.player_id_2);
+                    } 
+                    else
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.OpponentPlay + "", gr.player_id_1);
+                    }
                 }
                 break;
             default:
@@ -156,6 +192,18 @@ public class NetworkedServer : MonoBehaviour
             sr.Close();
         }
     }
+
+    private GameRoom GetGameRoomWithClientId(int id)
+    {
+        foreach (GameRoom item in room_list_)
+        {
+            if (item.player_id_1 == id || item.player_id_2 == id)
+            {
+                return item;
+            }
+        }
+        return null;
+    }
 }
 
 public class PlayerAccount
@@ -171,15 +219,23 @@ public class PlayerAccount
 
 public class GameRoom
 {
+    public int player_id_1, player_id_2;
 
+    public GameRoom(int id_1, int id_2)
+    {
+        player_id_1 = id_1;
+        player_id_2 = id_2;
+    }
 }
 
-public static class GlobalEnum //copied from NetworkedClient
+public static class NetworkEnum //copied from NetworkedClient
 {
     public enum ClientToServerSignifier
     {
         CreateAccount = 1,
-        Login
+        Login,
+        JoinQueueForGameRoom,
+        TTTPlay
     }
 
     public enum ServerToClientSignifier
@@ -187,6 +243,8 @@ public static class GlobalEnum //copied from NetworkedClient
         LoginComplete = 1,
         LoginFailed,
         AccountCreationComplete,
-        AccountCreationFailed
+        AccountCreationFailed,
+        OpponentPlay,
+        GameStart
     }
 }
