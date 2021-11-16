@@ -20,7 +20,7 @@ public class NetworkedServer : MonoBehaviour
     int player_id_waiting_for_match_ = -1;
     LinkedList<GameRoom> room_list_;
 
-    void Start()
+    void Awake()
     {
         NetworkTransport.Init();
         ConnectionConfig config = new ConnectionConfig();
@@ -138,11 +138,23 @@ public class NetworkedServer : MonoBehaviour
                 }
                 else //create room when 2nd player joins
                 {
-                    GameRoom gr = new GameRoom(player_id_waiting_for_match_, id);
-                    room_list_.AddLast(gr);
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_1);
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_2);
+                    GameRoom room = new GameRoom(player_id_waiting_for_match_, id);
+                    room_list_.AddLast(room);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_1);
+                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_2);
                     player_id_waiting_for_match_ = -1;
+                    Debug.Log(">>> Created game room with player_id_1: "+ room.player_id_1 + ", player_id_2: " + room.player_id_2);
+                    int first_turn = Random.Range(0, 1);
+                    if (first_turn == 0)
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_2);
+                    }
+                    else
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_2);
+                    }
                 }
                 break;
             case NetworkEnum.ClientToServerSignifier.TTTPlay:
@@ -220,11 +232,93 @@ public class PlayerAccount
 public class GameRoom
 {
     public int player_id_1, player_id_2;
+    
+    // GAME VARS
+    public int grid_size_x = 3, grid_size_y = 3;
+    public int[,] grid;
+    public string player_1_token = "X";
+    public string player_2_token = "O";
+    public int move_count_ = 0;
 
     public GameRoom(int id_1, int id_2)
     {
         player_id_1 = id_1;
         player_id_2 = id_2;
+
+        grid = new int[grid_size_x, grid_size_y];
+        for (int j = 0; j < grid_size_y; j++)
+        {
+            for (int i = 0; i < grid_size_x; i++)
+            {
+                grid[i, j] = -1; //blank state
+            }
+        }
+    }
+
+    public GameEnum.State CheckGridCoord(int player_id, Vector2Int coord)
+    {
+        move_count_++;
+        // CHECK WITH OTHER COLS
+        for (int i = 0; i < grid_size_x; i++)
+        {
+            if (grid[coord.x, i] != player_id)
+                break;
+            if (i == grid_size_x - 1)
+            {
+                //report win for player_id_
+                return (GameEnum.State.TicTacToeWin);
+            }
+        }
+
+        // CHECK WITH OTHER ROWS
+        for (int i = 0; i < grid_size_x; i++)
+        {
+            if (grid[i, coord.y] != player_id)
+                break;
+            if (i == grid_size_x - 1)
+            {
+                //report win for player_id_
+                return (GameEnum.State.TicTacToeWin);
+            }
+        }
+
+        // CHECK DIAGONALLY
+        if (coord.x == coord.y)
+        {
+            for (int i = 0; i < grid_size_x; i++)
+            {
+                if (grid[i, i] != player_id)
+                    break;
+                if (i == grid_size_x - 1)
+                {
+                    //report win for player_id_
+                    return (GameEnum.State.TicTacToeWin);
+                }
+            }
+        }
+
+        // CHECK REVERSE DIAGONALLY
+        if (coord.x + coord.y == grid_size_x - 1)
+        {
+            for (int i = 0; i < grid_size_x; i++)
+            {
+                if (grid[i, (grid_size_x - 1) - i] != player_id)
+                    break;
+                if (i == grid_size_x - 1)
+                {
+                    //report win for player_id_
+                    return (GameEnum.State.TicTacToeWin);
+                }
+            }
+        }
+
+        // CHECK IF IS TIE
+        if (move_count_ == (Mathf.Pow(grid_size_x, 2) - 1))
+        {
+            return (GameEnum.State.TicTacToeDraw);
+        }
+
+        return GameEnum.State.TicTacToeNextPlayer;
     }
 }
 
@@ -244,7 +338,33 @@ public static class NetworkEnum //copied from NetworkedClient
         LoginFailed,
         AccountCreationComplete,
         AccountCreationFailed,
+        GameStart,
+        GameDoTurn,
+        GameWaitForTurn,
         OpponentPlay,
-        GameStart
+        GameDraw,
+        GameCurrPlayerWin,
+        GameOtherPlayerWin
+    }
+}
+
+public static class GameEnum
+{
+    public enum State
+    {
+        LoginMenu = 1,
+        MainMenu,
+        WaitingInQueueForOtherPlayer,
+        TicTacToe,
+        TicTacToeNextPlayer,
+        TicTacToeWin,
+        TicTacToeDraw,
+    }
+
+    public enum TicTacToeButtonState
+    {
+        kBlank,
+        kPlayer1,
+        kPlayer2
     }
 }
