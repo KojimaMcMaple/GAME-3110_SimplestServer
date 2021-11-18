@@ -165,33 +165,25 @@ public class NetworkedServer : MonoBehaviour
                 {
                     string x = csv[1];
                     string y = csv[2];
+                    int id_cast = (int)GameEnum.TicTacToeButtonState.kBlank;
                     if (gr.player_id_1 == id)
                     {
+                        id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer1;
                         gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer1;
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_1);
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_2);
                     }
                     else
                     {
+                        id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer2;
                         gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer2;
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
                     }
-                    switch (gr.CheckGridCoord(id, new Vector2Int(int.Parse(x), int.Parse(y))))
+                    switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
                     {
-                        case GameEnum.State.TicTacToeNextPlayer:
-                            if (gr.player_id_1 == id)
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
-                            }
-                            else
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
-                            }
-                            break;
                         case GameEnum.State.TicTacToeWin:
+                            Debug.Log(">>> TicTacToeWin");
                             if (gr.player_id_1 == id)
                             {
                                 SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_1);
@@ -204,8 +196,21 @@ public class NetworkedServer : MonoBehaviour
                             }
                             break;
                         case GameEnum.State.TicTacToeDraw:
+                            Debug.Log(">>> TicTacToeDraw");
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_1);
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_2);
+                            break;
+                        case GameEnum.State.TicTacToeNextPlayer:
+                            if (gr.player_id_1 == id)
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
+                            }
+                            else
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
+                            }
                             break;
                         default:
                             break;
@@ -300,17 +305,16 @@ public class GameRoom
     {
         move_count_++;
         // CHECK WITH OTHER COLS
-        for (int i = 0; i < grid_size_x; i++)
+        for (int i = 0; i < grid_size_y; i++)
         {
             if (grid[coord.x, i] != player_id)
                 break;
-            if (i == grid_size_x - 1)
+            if (i == grid_size_y - 1)
             {
                 //report win for player_id_
                 return (GameEnum.State.TicTacToeWin);
             }
         }
-
         // CHECK WITH OTHER ROWS
         for (int i = 0; i < grid_size_x; i++)
         {
@@ -322,7 +326,6 @@ public class GameRoom
                 return (GameEnum.State.TicTacToeWin);
             }
         }
-
         // CHECK DIAGONALLY
         if (coord.x == coord.y)
         {
@@ -337,7 +340,6 @@ public class GameRoom
                 }
             }
         }
-
         // CHECK REVERSE DIAGONALLY
         if (coord.x + coord.y == grid_size_x - 1)
         {
@@ -352,7 +354,6 @@ public class GameRoom
                 }
             }
         }
-
         // CHECK IF IS TIE
         if (move_count_ == (Mathf.Pow(grid_size_x, 2) - 1))
         {
