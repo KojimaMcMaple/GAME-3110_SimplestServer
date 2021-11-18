@@ -81,17 +81,17 @@ public class NetworkedServer : MonoBehaviour
         Debug.Log("msg received = " + msg + ".  connection id = " + id);
         string[] csv = msg.Split(',');
         NetworkEnum.ClientToServerSignifier signifier = (NetworkEnum.ClientToServerSignifier)System.Enum.Parse(typeof(NetworkEnum.ClientToServerSignifier), csv[0]);
-        string n = csv[1];
-        string p = csv[2];
-
+        
         switch (signifier)
         {
             case NetworkEnum.ClientToServerSignifier.CreateAccount:
                 Debug.Log(">>> Creating Account...");
+                string nc = csv[1]; //name to CreateAccount
+                string pc = csv[2]; //password to CreateAccount
                 bool does_name_exist = false;
                 foreach (PlayerAccount item in account_list_)
                 {
-                    if (item.name == n)
+                    if (item.name == nc)
                     {
                         does_name_exist = true;
                         break;
@@ -104,7 +104,7 @@ public class NetworkedServer : MonoBehaviour
                 }
                 else
                 {
-                    PlayerAccount new_account = new PlayerAccount(n, p);
+                    PlayerAccount new_account = new PlayerAccount(nc, pc);
                     account_list_.AddLast(new_account);
                     SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
                     SavePlayerAccounts();
@@ -113,10 +113,12 @@ public class NetworkedServer : MonoBehaviour
                 break;
             case NetworkEnum.ClientToServerSignifier.Login:
                 Debug.Log(">>> Logging in...");
+                string nl = csv[1]; //name to Login
+                string pl = csv[2]; //password to Login
                 bool does_account_exist = false;
                 foreach (PlayerAccount item in account_list_)
                 {
-                    if (item.name == n && item.password == p)
+                    if (item.name == nl && item.password == pl)
                     {
                         does_account_exist = true;
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginComplete + "", id);
