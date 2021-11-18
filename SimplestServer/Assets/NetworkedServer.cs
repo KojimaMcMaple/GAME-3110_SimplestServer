@@ -161,13 +161,52 @@ public class NetworkedServer : MonoBehaviour
                 GameRoom gr = GetGameRoomWithClientId(id);
                 if (gr != null)
                 {
+                    string x = csv[1];
+                    string y = csv[2];
                     if (gr.player_id_1 == id)
                     {
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.OpponentPlay + "", gr.player_id_2);
-                    } 
+                        gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer1;
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_2);
+                    }
                     else
                     {
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.OpponentPlay + "", gr.player_id_1);
+                        gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer2;
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
+                    }
+                    switch (gr.CheckGridCoord(id, new Vector2Int(int.Parse(x), int.Parse(y))))
+                    {
+                        case GameEnum.State.TicTacToeNextPlayer:
+                            if (gr.player_id_1 == id)
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
+                            }
+                            else
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
+                            }
+                            break;
+                        case GameEnum.State.TicTacToeWin:
+                            if (gr.player_id_1 == id)
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_2);
+                            }
+                            else
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_2);
+                            }
+                            break;
+                        case GameEnum.State.TicTacToeDraw:
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_2);
+                            break;
+                        default:
+                            break;
                     }
                 }
                 break;
@@ -250,7 +289,7 @@ public class GameRoom
         {
             for (int i = 0; i < grid_size_x; i++)
             {
-                grid[i, j] = -1; //blank state
+                grid[i, j] = (int)GameEnum.TicTacToeButtonState.kBlank; //blank state
             }
         }
     }
@@ -341,7 +380,7 @@ public static class NetworkEnum //copied from NetworkedClient
         GameStart,
         GameDoTurn,
         GameWaitForTurn,
-        OpponentPlay,
+        GameMarkSpace,
         GameDraw,
         GameCurrPlayerWin,
         GameOtherPlayerWin
@@ -363,7 +402,7 @@ public static class GameEnum
 
     public enum TicTacToeButtonState
     {
-        kBlank,
+        kBlank = -1,
         kPlayer1,
         kPlayer2
     }
