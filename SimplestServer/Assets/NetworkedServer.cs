@@ -20,8 +20,6 @@ public class NetworkedServer : MonoBehaviour
     int player_id_waiting_for_match_ = -1;
     LinkedList<GameRoom> room_list_;
 
-    LinkedList<string> replay_log_;
-
     void Awake()
     {
         NetworkTransport.Init();
@@ -40,7 +38,6 @@ public class NetworkedServer : MonoBehaviour
 
         //}
         room_list_ = new LinkedList<GameRoom>();
-        replay_log_ = new LinkedList<string>();
     }
 
     void Update()
@@ -190,7 +187,7 @@ public class NetworkedServer : MonoBehaviour
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
                         }
-                        replay_log_.AddLast(x + "," + y + "," + gr.grid[int.Parse(x), int.Parse(y)]);
+                        gr.replay_log_.Add(x + "," + y + "," + gr.grid[int.Parse(x), int.Parse(y)]);
                         switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
                         {
                             case GameEnum.State.TicTacToeWin:
@@ -247,6 +244,60 @@ public class NetworkedServer : MonoBehaviour
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str, gr.player_id_2);
                         Debug.Log(">>> Relayed: " + (int)NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str + " >>> " + gr.player_id_1);
                         Debug.Log(">>> Relayed: " + (int)NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str + " >>> " + gr.player_id_2);
+                    }
+                    break;
+                }
+            case NetworkEnum.ClientToServerSignifier.DoReplay:
+                {
+                    Debug.Log(">>> DoReplay");
+                    GameRoom gr = GetGameRoomWithClientId(id);
+                    if (gr != null)
+                    {
+                        if (gr.player_id_1 == id)
+                        {
+                            gr.p1_replay_step_ = 0;
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
+                            gr.p1_replay_step_++;
+                        }
+                        else
+                        {
+                            gr.p2_replay_step_ = 0;
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
+                            gr.p2_replay_step_++;
+                        }
+                    }
+                    break;
+                }
+            case NetworkEnum.ClientToServerSignifier.NextReplayMove:
+                {
+                    Debug.Log(">>> DoReplay");
+                    GameRoom gr = GetGameRoomWithClientId(id);
+                    if (gr != null)
+                    {
+                        if (gr.player_id_1 == id)
+                        {
+                            if (gr.p1_replay_step_ < gr.max_replay_steps_)
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
+                                gr.p1_replay_step_++;
+                            }
+                            else
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayEnd + "", gr.player_id_1);
+                            }
+                        }
+                        else
+                        {
+                            if (gr.p2_replay_step_ < gr.max_replay_steps_)
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
+                                gr.p2_replay_step_++;
+                            }
+                            else
+                            {
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayEnd + "", gr.player_id_2);
+                            }
+                        }
                     }
                     break;
                 }
@@ -317,6 +368,12 @@ public class GameRoom
     public string player_2_token = "O";
     public int move_count_ = 0;
 
+    // REPLAY VARS
+    public List<string> replay_log_;
+    public int p1_replay_step_ = 0;
+    public int p2_replay_step_ = 0;
+    public int max_replay_steps_ = 0;
+
     public GameRoom(int id_1, int id_2)
     {
         player_id_1 = id_1;
@@ -330,6 +387,9 @@ public class GameRoom
                 grid[i, j] = (int)GameEnum.TicTacToeButtonState.kBlank; //blank state
             }
         }
+
+        replay_log_ = new List<string>();
+        max_replay_steps_ = grid_size_x * grid_size_y;
     }
 
     public GameEnum.State CheckGridCoord(int player_id, Vector2Int coord)
@@ -403,7 +463,9 @@ public static class NetworkEnum //copied from NetworkedClient
         Login,
         JoinQueueForGameRoom,
         TTTPlay,
-        ChatSend
+        ChatSend,
+        DoReplay,
+        NextReplayMove
     }
 
     public enum ServerToClientSignifier
@@ -419,7 +481,9 @@ public static class NetworkEnum //copied from NetworkedClient
         GameDraw,
         GameCurrPlayerWin,
         GameOtherPlayerWin,
-        ChatRelay
+        ChatRelay,
+        ReplayRelay,
+        ReplayEnd
     }
 }
 
