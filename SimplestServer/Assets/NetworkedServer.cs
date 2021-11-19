@@ -85,140 +85,165 @@ public class NetworkedServer : MonoBehaviour
         switch (signifier)
         {
             case NetworkEnum.ClientToServerSignifier.CreateAccount:
-                Debug.Log(">>> Creating Account...");
-                string nc = csv[1]; //name to CreateAccount
-                string pc = csv[2]; //password to CreateAccount
-                bool does_name_exist = false;
-                foreach (PlayerAccount item in account_list_)
                 {
-                    if (item.name == nc)
+                    Debug.Log(">>> Creating Account...");
+                    string n = csv[1]; //name to CreateAccount
+                    string p = csv[2]; //password to CreateAccount
+                    bool does_name_exist = false;
+                    foreach (PlayerAccount item in account_list_)
                     {
-                        does_name_exist = true;
-                        break;
+                        if (item.name == n)
+                        {
+                            does_name_exist = true;
+                            break;
+                        }
                     }
+                    if (does_name_exist)
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationFailed + "", id);
+                        Debug.Log(">>> Creating Account FAILED!");
+                    }
+                    else
+                    {
+                        PlayerAccount new_account = new PlayerAccount(n, p);
+                        account_list_.AddLast(new_account);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
+                        SavePlayerAccounts();
+                        Debug.Log(">>> Creating Account done!");
+                    }
+                    break;
                 }
-                if (does_name_exist)
-                {
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationFailed + "", id);
-                    Debug.Log(">>> Creating Account FAILED!");
-                }
-                else
-                {
-                    PlayerAccount new_account = new PlayerAccount(nc, pc);
-                    account_list_.AddLast(new_account);
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.AccountCreationComplete + "", id);
-                    SavePlayerAccounts();
-                    Debug.Log(">>> Creating Account done!");
-                }
-                break;
             case NetworkEnum.ClientToServerSignifier.Login:
-                Debug.Log(">>> Logging in...");
-                string nl = csv[1]; //name to Login
-                string pl = csv[2]; //password to Login
-                bool does_account_exist = false;
-                foreach (PlayerAccount item in account_list_)
-                {
-                    if (item.name == nl && item.password == pl)
+                { 
+                    Debug.Log(">>> Logging in...");
+                    string n = csv[1]; //name to Login
+                    string p = csv[2]; //password to Login
+                    bool does_account_exist = false;
+                    foreach (PlayerAccount item in account_list_)
                     {
-                        does_account_exist = true;
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginComplete + "", id);
-                        Debug.Log(">>> Login done!");
-                        break;
+                        if (item.name == n && item.password == p)
+                        {
+                            does_account_exist = true;
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginComplete + "", id);
+                            Debug.Log(">>> Login done!");
+                            break;
+                        }
                     }
+                    if (!does_account_exist)
+                    {
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginFailed + "", id);
+                        Debug.Log(">>> Login FAILED!");
+                    }
+                    break;
                 }
-                if (!does_account_exist)
-                {
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.LoginFailed + "", id);
-                    Debug.Log(">>> Login FAILED!");
-                }
-                break;
             case NetworkEnum.ClientToServerSignifier.JoinQueueForGameRoom:
-                Debug.Log(">>> Getting player to queue...");
-                if (player_id_waiting_for_match_ == -1) //assign 1st player to player_id_waiting_for_match_
                 {
-                    player_id_waiting_for_match_ = id;
-                }
-                else //create room when 2nd player joins
-                {
-                    GameRoom room = new GameRoom(player_id_waiting_for_match_, id);
-                    room_list_.AddLast(room);
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_1);
-                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_2);
-                    player_id_waiting_for_match_ = -1;
-                    Debug.Log(">>> Created game room with player_id_1: "+ room.player_id_1 + ", player_id_2: " + room.player_id_2);
-                    int first_turn = Random.Range(0, 1);
-                    if (first_turn == 0)
+                    Debug.Log(">>> Getting player to queue...");
+                    if (player_id_waiting_for_match_ == -1) //assign 1st player to player_id_waiting_for_match_
                     {
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_2);
+                        player_id_waiting_for_match_ = id;
                     }
-                    else
+                    else //create room when 2nd player joins
                     {
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_2);
+                        GameRoom room = new GameRoom(player_id_waiting_for_match_, id);
+                        room_list_.AddLast(room);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_2);
+                        player_id_waiting_for_match_ = -1;
+                        Debug.Log(">>> Created game room with player_id_1: " + room.player_id_1 + ", player_id_2: " + room.player_id_2);
+                        int first_turn = Random.Range(0, 1);
+                        if (first_turn == 0)
+                        {
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_2);
+                        }
+                        else
+                        {
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_2);
+                        }
                     }
+                    break;
                 }
-                break;
             case NetworkEnum.ClientToServerSignifier.TTTPlay:
-                GameRoom gr = GetGameRoomWithClientId(id);
-                if (gr != null)
                 {
-                    string x = csv[1];
-                    string y = csv[2];
-                    int id_cast = (int)GameEnum.TicTacToeButtonState.kBlank;
-                    if (gr.player_id_1 == id)
+                    GameRoom gr = GetGameRoomWithClientId(id);
+                    if (gr != null)
                     {
-                        id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer1;
-                        gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer1;
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_2);
+                        string x = csv[1];
+                        string y = csv[2];
+                        int id_cast = (int)GameEnum.TicTacToeButtonState.kBlank;
+                        if (gr.player_id_1 == id)
+                        {
+                            id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer1;
+                            gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer1;
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_2);
+                        }
+                        else
+                        {
+                            id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer2;
+                            gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer2;
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
+                        }
+                        switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
+                        {
+                            case GameEnum.State.TicTacToeWin:
+                                Debug.Log(">>> TicTacToeWin");
+                                if (gr.player_id_1 == id)
+                                {
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_1);
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_2);
+                                }
+                                else
+                                {
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_1);
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_2);
+                                }
+                                break;
+                            case GameEnum.State.TicTacToeDraw:
+                                Debug.Log(">>> TicTacToeDraw");
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_2);
+                                break;
+                            case GameEnum.State.TicTacToeNextPlayer:
+                                if (gr.player_id_1 == id)
+                                {
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
+                                }
+                                else
+                                {
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
+                                    SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
+                                }
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                    else
-                    {
-                        id_cast = (int)GameEnum.TicTacToeButtonState.kPlayer2;
-                        gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer2;
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
-                    }
-                    switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
-                    {
-                        case GameEnum.State.TicTacToeWin:
-                            Debug.Log(">>> TicTacToeWin");
-                            if (gr.player_id_1 == id)
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_2);
-                            }
-                            else
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameOtherPlayerWin + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameCurrPlayerWin + "", gr.player_id_2);
-                            }
-                            break;
-                        case GameEnum.State.TicTacToeDraw:
-                            Debug.Log(">>> TicTacToeDraw");
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_1);
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDraw + "", gr.player_id_2);
-                            break;
-                        case GameEnum.State.TicTacToeNextPlayer:
-                            if (gr.player_id_1 == id)
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
-                            }
-                            else
-                            {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
-                            }
-                            break;
-                        default:
-                            break;
-                    }
+                    break;
                 }
-                break;
-            default:
-                break;
+            case NetworkEnum.ClientToServerSignifier.ChatSend:
+                {
+                    Debug.Log(">>> ChatSend");
+                    GameRoom gr = GetGameRoomWithClientId(id);
+                    if (gr != null)
+                    {
+                        string str = csv[1];
+                        if (csv.Length >1)
+                        {
+                            for (int i = 2; i < csv.Length; i++)
+                            {
+                                str = str + "," + csv[i];
+                            }
+                        }
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id + "]:" + str, gr.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id + "]:" + str, gr.player_id_2);
+                    }
+                    break;
+                }
         }
     }
 
@@ -371,7 +396,8 @@ public static class NetworkEnum //copied from NetworkedClient
         CreateAccount = 1,
         Login,
         JoinQueueForGameRoom,
-        TTTPlay
+        TTTPlay,
+        ChatSend
     }
 
     public enum ServerToClientSignifier
@@ -386,7 +412,8 @@ public static class NetworkEnum //copied from NetworkedClient
         GameMarkSpace,
         GameDraw,
         GameCurrPlayerWin,
-        GameOtherPlayerWin
+        GameOtherPlayerWin,
+        ChatRelay
     }
 }
 
