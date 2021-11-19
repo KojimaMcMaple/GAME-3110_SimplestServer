@@ -20,6 +20,8 @@ public class NetworkedServer : MonoBehaviour
     int player_id_waiting_for_match_ = -1;
     LinkedList<GameRoom> room_list_;
 
+    LinkedList<string> replay_log_;
+
     void Awake()
     {
         NetworkTransport.Init();
@@ -38,6 +40,7 @@ public class NetworkedServer : MonoBehaviour
 
         //}
         room_list_ = new LinkedList<GameRoom>();
+        replay_log_ = new LinkedList<string>();
     }
 
     void Update()
@@ -145,22 +148,22 @@ public class NetworkedServer : MonoBehaviour
                     }
                     else //create room when 2nd player joins
                     {
-                        GameRoom room = new GameRoom(player_id_waiting_for_match_, id);
-                        room_list_.AddLast(room);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", room.player_id_2);
+                        GameRoom gr = new GameRoom(player_id_waiting_for_match_, id);
+                        room_list_.AddLast(gr);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_2);
                         player_id_waiting_for_match_ = -1;
-                        Debug.Log(">>> Created game room with player_id_1: " + room.player_id_1 + ", player_id_2: " + room.player_id_2);
+                        Debug.Log(">>> Created game room with player_id_1: " + gr.player_id_1 + ", player_id_2: " + gr.player_id_2);
                         int first_turn = Random.Range(0, 1);
                         if (first_turn == 0)
                         {
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_1);
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_2);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_2);
                         }
                         else
                         {
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", room.player_id_1);
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", room.player_id_2);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameWaitForTurn + "", gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_2);
                         }
                     }
                     break;
@@ -187,6 +190,7 @@ public class NetworkedServer : MonoBehaviour
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
                         }
+                        replay_log_.AddLast(x + "," + y + "," + gr.grid[int.Parse(x), int.Parse(y)]);
                         switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
                         {
                             case GameEnum.State.TicTacToeWin:
@@ -239,8 +243,10 @@ public class NetworkedServer : MonoBehaviour
                                 str = str + "," + csv[i];
                             }
                         }
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id + "]:" + str, gr.player_id_1);
-                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id + "]:" + str, gr.player_id_2);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str, gr.player_id_1);
+                        SendMessageToClient(NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str, gr.player_id_2);
+                        Debug.Log(">>> Relayed: " + (int)NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str + " >>> " + gr.player_id_1);
+                        Debug.Log(">>> Relayed: " + (int)NetworkEnum.ServerToClientSignifier.ChatRelay + ",> [" + id.ToString() + "]:" + str + " >>> " + gr.player_id_2);
                     }
                     break;
                 }
