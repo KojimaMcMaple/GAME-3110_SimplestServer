@@ -151,7 +151,7 @@ public class NetworkedServer : MonoBehaviour
                         SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameStart + "", gr.player_id_2);
                         player_id_waiting_for_match_ = -1;
                         Debug.Log(">>> Created game room with player_id_1: " + gr.player_id_1 + ", player_id_2: " + gr.player_id_2);
-                        int first_turn = Random.Range(0, 1);
+                        int first_turn = Random.Range(0, 2);
                         if (first_turn == 0)
                         {
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameDoTurn + "", gr.player_id_1);
