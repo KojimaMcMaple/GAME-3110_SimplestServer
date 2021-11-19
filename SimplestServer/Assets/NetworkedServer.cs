@@ -179,6 +179,7 @@ public class NetworkedServer : MonoBehaviour
                             gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer1;
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_1);
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_1_token, gr.player_id_2);
+                            gr.replay_log_.Add(x + "," + y + "," + gr.player_1_token);
                         }
                         else
                         {
@@ -186,8 +187,8 @@ public class NetworkedServer : MonoBehaviour
                             gr.grid[int.Parse(x), int.Parse(y)] = (int)GameEnum.TicTacToeButtonState.kPlayer2;
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_1);
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.GameMarkSpace + "," + x + "," + y + "," + gr.player_2_token, gr.player_id_2);
+                            gr.replay_log_.Add(x + "," + y + "," + gr.player_2_token);
                         }
-                        gr.replay_log_.Add(x + "," + y + "," + gr.grid[int.Parse(x), int.Parse(y)]);
                         switch (gr.CheckGridCoord(id_cast, new Vector2Int(int.Parse(x), int.Parse(y))))
                         {
                             case GameEnum.State.TicTacToeWin:
@@ -256,13 +257,13 @@ public class NetworkedServer : MonoBehaviour
                         if (gr.player_id_1 == id)
                         {
                             gr.p1_replay_step_ = 0;
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
                             gr.p1_replay_step_++;
                         }
                         else
                         {
                             gr.p2_replay_step_ = 0;
-                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
+                            SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
                             gr.p2_replay_step_++;
                         }
                     }
@@ -276,9 +277,9 @@ public class NetworkedServer : MonoBehaviour
                     {
                         if (gr.player_id_1 == id)
                         {
-                            if (gr.p1_replay_step_ < gr.max_replay_steps_)
+                            if (gr.p1_replay_step_ < gr.replay_log_.Count)
                             {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
                                 gr.p1_replay_step_++;
                             }
                             else
@@ -288,9 +289,9 @@ public class NetworkedServer : MonoBehaviour
                         }
                         else
                         {
-                            if (gr.p2_replay_step_ < gr.max_replay_steps_)
+                            if (gr.p2_replay_step_ < gr.replay_log_.Count)
                             {
-                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
+                                SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
                                 gr.p2_replay_step_++;
                             }
                             else
@@ -372,7 +373,6 @@ public class GameRoom
     public List<string> replay_log_;
     public int p1_replay_step_ = 0;
     public int p2_replay_step_ = 0;
-    public int max_replay_steps_ = 0;
 
     public GameRoom(int id_1, int id_2)
     {
@@ -389,7 +389,6 @@ public class GameRoom
         }
 
         replay_log_ = new List<string>();
-        max_replay_steps_ = grid_size_x * grid_size_y;
     }
 
     public GameEnum.State CheckGridCoord(int player_id, Vector2Int coord)
@@ -446,7 +445,7 @@ public class GameRoom
             }
         }
         // CHECK IF IS TIE
-        if (move_count_ == (Mathf.Pow(grid_size_x, 2) - 1))
+        if (move_count_ == (Mathf.Pow(grid_size_x, 2)))
         {
             return (GameEnum.State.TicTacToeDraw);
         }
