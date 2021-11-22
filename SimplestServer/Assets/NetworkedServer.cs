@@ -300,21 +300,21 @@ public class NetworkedServer : MonoBehaviour
                         {
                             gr.p1_replay_step_ = 0;
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
-                            gr.p1_replay_step_++;
                             foreach (var item in observer_list_)
                             {
                                 SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], item);
                             }
+                            gr.p1_replay_step_++;
                         }
                         else
                         {
                             gr.p2_replay_step_ = 0;
                             SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
-                            gr.p2_replay_step_++;
                             foreach (var item in observer_list_)
                             {
                                 SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], item);
                             }
+                            gr.p2_replay_step_++;
                         }
                     }
                     break;
@@ -330,11 +330,11 @@ public class NetworkedServer : MonoBehaviour
                             if (gr.p1_replay_step_ < gr.replay_log_.Count)
                             {
                                 SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], gr.player_id_1);
-                                gr.p1_replay_step_++;
                                 foreach (var item in observer_list_)
                                 {
                                     SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p1_replay_step_], item);
                                 }
+                                gr.p1_replay_step_++;
                             }
                             else
                             {
@@ -350,11 +350,11 @@ public class NetworkedServer : MonoBehaviour
                             if (gr.p2_replay_step_ < gr.replay_log_.Count)
                             {
                                 SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], gr.player_id_2);
-                                gr.p2_replay_step_++;
                                 foreach (var item in observer_list_)
                                 {
                                     SendMessageToClient(NetworkEnum.ServerToClientSignifier.ReplayRelay + "," + gr.replay_log_[gr.p2_replay_step_], item);
                                 }
+                                gr.p2_replay_step_++;
                             }
                             else
                             {
