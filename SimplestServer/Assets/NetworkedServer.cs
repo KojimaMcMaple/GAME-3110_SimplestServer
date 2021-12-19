@@ -541,13 +541,13 @@ public class GameRecording
             player_id_1 + "," + player_id_2 + "," +
             grid_size_x + "," + grid_size_y + "," +
             start_datetime.Year.ToString() + "," + start_datetime.Month.ToString() + "," + start_datetime.Day.ToString() + "," +
-            start_datetime.Hour.ToString() + "," + start_datetime.Minute.ToString());
+            start_datetime.Hour.ToString() + "," + start_datetime.Minute.ToString() + "," + start_datetime.Second.ToString());
         foreach (GameMove item in game_move_queue)
         {
             data.Enqueue((int)GameEnum.RecordDataId.kMoveDataId + "," +
                 (int)item.turn + "," + item.grid_coord_x + "," + item.grid_coord_y + "," +
             item.datetime.Year.ToString() + "," + item.datetime.Month.ToString() + "," + item.datetime.Day.ToString() + "," +
-            item.datetime.Hour.ToString() + "," + item.datetime.Minute.ToString());
+            item.datetime.Hour.ToString() + "," + item.datetime.Minute.ToString() + "," + item.datetime.Second.ToString());
         }
         return data;
     }
@@ -565,11 +565,11 @@ public class GameRecording
                     player_id_2 = int.Parse(csv[2]);
                     grid_size_x = int.Parse(csv[3]);
                     grid_size_y = int.Parse(csv[4]);
-                    start_datetime = new System.DateTime(int.Parse(csv[5]), int.Parse(csv[6]) , int.Parse(csv[7]) , int.Parse(csv[8]) , int.Parse(csv[9]), 0);
+                    start_datetime = new System.DateTime(int.Parse(csv[5]), int.Parse(csv[6]) , int.Parse(csv[7]) , int.Parse(csv[8]) , int.Parse(csv[9]), int.Parse(csv[10]));
                     break;
                 case GameEnum.RecordDataId.kMoveDataId:
                     game_move_queue.Enqueue(new GameMove((GameEnum.PlayerTurn)int.Parse(csv[1]), int.Parse(csv[2]), int.Parse(csv[3]),
-                        new System.DateTime(int.Parse(csv[4]), int.Parse(csv[5]), int.Parse(csv[6]), int.Parse(csv[7]), int.Parse(csv[8]), 0)));
+                        new System.DateTime(int.Parse(csv[4]), int.Parse(csv[5]), int.Parse(csv[6]), int.Parse(csv[7]), int.Parse(csv[8]), int.Parse(csv[9]))));
                     break;
             }
         }
