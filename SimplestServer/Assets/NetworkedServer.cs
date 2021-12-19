@@ -499,6 +499,7 @@ public class GameRecording
     public int player_id_1, player_id_2;
     public int grid_size_x, grid_size_y;
     public System.DateTime start_datetime;
+    public Queue<GameMove> game_move_queue;
 
     public struct GameMove
     {
@@ -515,7 +516,6 @@ public class GameRecording
             this.datetime = datetime;
         }
     }
-    public Queue<GameMove> game_move_queue;
 
     public GameRecording(int id_1, int id_2, int grid_size_x, int grid_size_y)
     {
@@ -524,10 +524,13 @@ public class GameRecording
         this.grid_size_x = grid_size_x;
         this.grid_size_y = grid_size_y;
         start_datetime = System.DateTime.Now;
+        game_move_queue = new Queue<GameMove>();
     }
 
     public void AddGameMoveWithCurrTime(GameEnum.PlayerTurn turn, int grid_coord_x, int grid_coord_y)
     {
+        Debug.Log(">>> AddGameMoveWithCurrTime: " + turn + ", " + grid_coord_x + ", " + grid_coord_y);
+        Debug.Log(System.DateTime.Now);
         game_move_queue.Enqueue(new GameMove(turn, grid_coord_x, grid_coord_y, System.DateTime.Now));
     }
 
